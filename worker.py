@@ -1,16 +1,33 @@
 import ray
 import torch
+import torch.distributed as dist
 from comfy.ldm.flux.model import Flux, FluxParams
 
 class FluxWorker:
+    modules_to_convert = []
+
     def __init__(self, **kwargs):
         self.world_size = kwargs.pop('world_size', 1)
         self.ulysses_degree = kwargs.pop('ulysses_degree', 1)
         self.ring_degree = kwargs.pop('ring_degree', 1)
         self.rank = self.local_rank = ray.get_gpu_ids()[0]
-        print(f'{self.rank=}, {kwargs}')
+        self._init_distributed_enviroment(kwargs.pop('distributed_init_method', 'env://'))
         self.device = "cuda:0"
-        self.flux = Flux(**kwargs).to(self.device)
+        model = Flux(**kwargs)
+        self.flux = self._parallelize_flux_model(model).to(self.device)
+
+    def _init_distributed_enviroment(self, distributed_init_method):
+        dist.init_process_group(
+            backend='nccl',
+            init_method=distributed_init_method,
+            world_size=self.world_size,
+            rank=self.rank,
+        )
+        torch.cuda.set_device("cuda:0")
+
+    def _parallelize_flux_model(self, model):
+        pass
+
 
     def forward(self, x, timestep, context, y, guidance, control=None, **kwargs):
         with torch.no_grad():

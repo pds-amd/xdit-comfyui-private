@@ -9,6 +9,7 @@ from ray.util.placement_group import PlacementGroup
 from ray.util.placement_group import PlacementGroupSchedulingStrategy
 
 from worker import FluxWorker
+from utils import get_open_port, get_distributed_init_method
 
 logger = getLogger(__name__)
 
@@ -62,6 +63,10 @@ class FluxExecutor:
         self._initialize_ray_cluster()
         self.workers = []
 
+        distributed_init_method = get_distributed_init_method(
+            "127.0.0.1",
+            get_open_port(),
+        )
         for bundle_id, bundle in enumerate(self.placement_group.bundle_specs):
             if bundle_id >= self.max_devices_use:
                 break
@@ -81,6 +86,7 @@ class FluxExecutor:
                 world_size=len(self.placement_group.bundle_specs), 
                 ulysses_degree=4,
                 ring_degree=2,
+                distributed_init_method=distributed_init_method,
                 **kwargs
             )
 
