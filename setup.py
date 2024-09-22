@@ -5,7 +5,7 @@ import sys
 
 
 if __name__ == "__main__":
-    fp = open("__version__.py", "r").read()
+    fp = open("xdit_comfyui_private/__version__.py", "r").read()
     version = eval(fp.strip().split()[-1])
 
     setup(

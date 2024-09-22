@@ -3,7 +3,7 @@ import logging
 import socket
 from comfy import model_management
 from comfy import model_detection
-from .executor import FluxExecutor
+from .executor.executor import FluxExecutor
 
 def load_diffusion_model_state_dict(sd, model_options={}): #load unet in diffusers or regular format
     dtype = model_options.get("dtype", None)
@@ -78,19 +78,3 @@ def load_diffusion_model(unet_path, model_options={}):
         logging.error("ERROR UNSUPPORTED UNET {}".format(unet_path))
         raise RuntimeError("ERROR: Could not detect model type of: {}".format(unet_path))
     return model
-
-def get_open_port() -> int:
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(("", 0))
-            return s.getsockname()[1]
-    except OSError:
-        # try ipv6
-        with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as s:
-            s.bind(("", 0))
-            return s.getsockname()[1]
-
-def get_distributed_init_method(ip: str, port: int) -> str:
-    # Brackets are not permitted in ipv4 addresses,
-    # see https://github.com/python/cpython/issues/103848
-    return f"tcp://[{ip}]:{port}" if ":" in ip else f"tcp://{ip}:{port}"

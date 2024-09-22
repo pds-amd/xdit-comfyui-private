@@ -13,8 +13,8 @@ class FluxWorker:
         self.rank = self.local_rank = ray.get_gpu_ids()[0]
         self._init_distributed_enviroment(kwargs.pop('distributed_init_method', 'env://'))
         self.device = "cuda:0"
-        model = Flux(**kwargs)
-        self.flux = self._parallelize_flux_model(model).to(self.device)
+        self.flux = Flux(**kwargs).to(self.device)
+        # self.flux = self._parallelize_flux_model(model).to(self.device)
 
     def _init_distributed_enviroment(self, distributed_init_method):
         dist.init_process_group(

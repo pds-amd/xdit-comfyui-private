@@ -8,8 +8,8 @@ import ray
 from ray.util.placement_group import PlacementGroup
 from ray.util.placement_group import PlacementGroupSchedulingStrategy
 
-from worker import FluxWorker
-from utils import get_open_port, get_distributed_init_method
+from xdit_comfyui_private.worker.worker import FluxWorker
+from .utils import get_open_port, get_distributed_init_method
 
 logger = getLogger(__name__)
 
