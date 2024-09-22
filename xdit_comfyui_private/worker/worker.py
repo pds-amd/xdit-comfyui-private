@@ -1,7 +1,8 @@
 import ray
 import torch
 import torch.distributed as dist
-from comfy.ldm.flux.model import Flux, FluxParams
+from xdit_comfyui_private.model.flux.flux import xFuserFlux
+from xdit_comfyui_private.distributed.parallel_state import init_distributed_enviroment, init_model_parallel
 
 class FluxWorker:
     modules_to_convert = []
@@ -11,19 +12,12 @@ class FluxWorker:
         self.ulysses_degree = kwargs.pop('ulysses_degree', 1)
         self.ring_degree = kwargs.pop('ring_degree', 1)
         self.rank = self.local_rank = ray.get_gpu_ids()[0]
-        self._init_distributed_enviroment(kwargs.pop('distributed_init_method', 'env://'))
         self.device = "cuda:0"
-        self.flux = Flux(**kwargs).to(self.device)
-        # self.flux = self._parallelize_flux_model(model).to(self.device)
 
-    def _init_distributed_enviroment(self, distributed_init_method):
-        dist.init_process_group(
-            backend='nccl',
-            init_method=distributed_init_method,
-            world_size=self.world_size,
-            rank=self.rank,
-        )
-        torch.cuda.set_device("cuda:0")
+        init_distributed_enviroment(kwargs.pop('distributed_init_method', 'env://'), self.world_size, self.rank)
+        init_model_parallel(self.ulysses_degree, self.ring_degree, self.rank, self.world_size)
+        model = xFuserFlux(**kwargs)
+        self.flux = self._parallelize_flux_model(model).to(self.device)
 
     def _parallelize_flux_model(self, model):
         pass
