@@ -42,7 +42,6 @@ class xFuserLongContextAttention(LongContextAttention):
     @torch.compiler.disable
     def forward(
         self,
-        attn,
         query: Tensor,
         key: Tensor,
         value: Tensor,
@@ -292,7 +291,6 @@ class xFuserFluxLongContextAttention(xFuserLongContextAttention):
             value_layer = SeqAllToAll4D.apply(
                 self.ulysses_pg, value, self.scatter_idx, self.gather_idx
             )
-
         out = self.ring_attn_fn(
             query_layer,
             key_layer,

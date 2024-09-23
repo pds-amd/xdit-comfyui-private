@@ -1,5 +1,6 @@
 import torch
 from flash_attn.flash_attn_interface import _flash_attn_forward
+import torch.distributed
 from yunchang.ring.utils import RingComm, update_out_and_lse
 from yunchang.ring.ring_flash_attn import RingFlashAttnFunc
 
@@ -25,7 +26,7 @@ def ring_flash_attn_forward(
         raise ValueError(
             f"joint_strategy: {joint_strategy} not supprted. supported joint strategy: {supported_joint_strategy}"
         )
-    elif joint_strategy is not "none" and (
+    elif joint_strategy != "none" and (
         joint_tensor_key is None or joint_tensor_value is None
     ):
         raise ValueError(
@@ -39,9 +40,9 @@ def ring_flash_attn_forward(
 
     next_k, next_v = None, None
 
-    # TODO(Eigensystem): check if nessesary
-    k = k.contiguous()
-    v = v.contiguous()
+    # # TODO(Eigensystem): check if nessesary
+    # k = k.contiguous()
+    # v = v.contiguous()
 
     for step in range(comm.world_size):
         if step + 1 != comm.world_size:

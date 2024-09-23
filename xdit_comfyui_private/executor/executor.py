@@ -56,6 +56,8 @@ def _wait_until_pg_ready(current_placement_group: "PlacementGroup"):
 class FluxExecutor:
     def __init__(self, **kwargs):
         self.max_devices_use = 4
+        self.ulysses_degree = 2
+        self.ring_degree = 2
         self._init_flux_workers(**kwargs)
         self.dtype = kwargs.get('dtype', None)
 
@@ -67,8 +69,9 @@ class FluxExecutor:
             "127.0.0.1",
             get_open_port(),
         )
+        self.world_size = min(len(self.placement_group.bundle_specs), self.max_devices_use)
         for bundle_id, bundle in enumerate(self.placement_group.bundle_specs):
-            if bundle_id >= self.max_devices_use:
+            if bundle_id >= self.world_size:
                 break
             if not bundle.get("GPU", 0):
                 continue
@@ -83,9 +86,9 @@ class FluxExecutor:
                 num_gpus=1,
                 scheduling_strategy=scheduling_strategy,
             )(FluxWorker).remote(
-                world_size=len(self.placement_group.bundle_specs), 
-                ulysses_degree=4,
-                ring_degree=2,
+                world_size=self.world_size, 
+                ulysses_degree=self.ulysses_degree,
+                ring_degree=self.ring_degree,
                 distributed_init_method=distributed_init_method,
                 **kwargs
             )

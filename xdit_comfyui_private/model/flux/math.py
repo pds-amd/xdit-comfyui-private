@@ -9,35 +9,47 @@ from xdit_comfyui_private.envs import HAS_FLASH_ATTN
 
 
 hybrid_seq_parallel_attn = None
+hybrid_seq_parallel_attn_joint = None
 
 def init_seq_parallel_attn():
     global hybrid_seq_parallel_attn
+    global hybrid_seq_parallel_attn_joint
     if HAS_FLASH_ATTN:
-        from xdit_comfyui_private.modules.long_ctx_attention.hybrid import xFuserFluxLongContextAttention
-        hybrid_seq_parallel_attn = xFuserFluxLongContextAttention()
+        from xdit_comfyui_private.modules.long_ctx_attention.hybrid import xFuserFluxLongContextAttention, xFuserLongContextAttention
+        hybrid_seq_parallel_attn_joint = xFuserFluxLongContextAttention()
+        hybrid_seq_parallel_attn = xFuserLongContextAttention()
     else:
         from xdit_comfyui_private.modules.long_ctx_attention.ulysses import xFuserUlyssesAttention
-        hybrid_seq_parallel_attn = xFuserUlyssesAttention(use_fa=False)
+        hybrid_seq_parallel_attn_joint = xFuserUlyssesAttention(use_fa=False)
+        hybrid_seq_parallel_attn = hybrid_seq_parallel_attn_joint
 
 
 def attention(img_q: Tensor, img_k: Tensor, img_v: Tensor, pe: Tensor, txt_q: Optional[Tensor] = None, txt_k: Optional[Tensor] = None, txt_v: Optional[Tensor] = None, joint_strategy = 'front') -> Tensor:
-    txt_seq_len = txt_q.shape[2]
     bs, heads, _, head_dim = img_q.shape
-    q = torch.cat((txt_q, img_q), dim=2)
-    k = torch.cat((txt_k, img_k), dim=2)
-    q, k = apply_rope(q, k, pe)
-    q = q.transpose(1,2)
-    k = k.transpose(1,2)
-    txt_q = q[:, :txt_seq_len, ...]
-    img_q = q[:, txt_seq_len:, ...]
-    txt_k = k[:, :txt_seq_len, ...]
-    img_k = k[:, txt_seq_len:, ...]
+    if joint_strategy == 'none':
+        img_q, img_k = apply_rope(img_q, img_k, pe)
+        img_q = img_q.transpose(1,2)
+        img_k = img_k.transpose(1,2)
+        img_v = img_v.transpose(1,2)
+        x = hybrid_seq_parallel_attn(img_q, img_k, img_v, joint_strategy=joint_strategy)
+    else:
+        txt_seq_len = txt_q.shape[2] if txt_q is not None else 0
+        q = torch.cat((txt_q, img_q), dim=2)
+        k = torch.cat((txt_k, img_k), dim=2)
+        q, k = apply_rope(q, k, pe)
+        q = q.transpose(1,2)
+        k = k.transpose(1,2)
+        img_v = img_v.transpose(1,2)
+        txt_v = txt_v.transpose(1,2)
+        txt_q = q[:, :txt_seq_len, ...]
+        img_q = q[:, txt_seq_len:, ...]
+        txt_k = k[:, :txt_seq_len, ...]
+        img_k = k[:, txt_seq_len:, ...]
+        x = hybrid_seq_parallel_attn_joint(img_q, img_k, img_v, joint_tensor_query = txt_q, joint_tensor_key=txt_k, joint_tensor_value=txt_v, joint_strategy=joint_strategy)
 
-    x = hybrid_seq_parallel_attn(img_q, img_k, img_v, joint_tensor_query = txt_q, joint_tensor_key=txt_k, joint_tensor_value=txt_v, joint_strategy=joint_strategy)
     x = x.reshape(bs, -1, heads * head_dim)
 
     return x
-
 
 def rope(pos: Tensor, dim: int, theta: int) -> Tensor:
     assert dim % 2 == 0

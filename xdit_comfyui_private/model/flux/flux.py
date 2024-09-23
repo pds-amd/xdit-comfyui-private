@@ -146,4 +146,9 @@ class xFuserFlux(Flux):
 
         txt_ids = torch.zeros((bs, context.shape[1], 3), device=x.device, dtype=x.dtype)
         out = self.forward_orig(img, img_ids, context, txt_ids, timestep, y, guidance, control)
+        out_list = [
+            torch.empty_like(out) for _ in range(dist.get_world_size())
+        ]
+        dist.all_gather(out_list, out)
+        out = torch.cat(out_list, dim=1)
         return rearrange(out, "b (h w) (c ph pw) -> b c (h ph) (w pw)", h=h_len, w=w_len, ph=2, pw=2)[:,:,:h,:w]
