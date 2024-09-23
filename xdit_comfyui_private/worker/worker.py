@@ -16,11 +16,7 @@ class FluxWorker:
 
         init_distributed_enviroment(kwargs.pop('distributed_init_method', 'env://'), self.world_size, self.rank)
         init_model_parallel(self.ulysses_degree, self.ring_degree, self.rank, self.world_size)
-        model = xFuserFlux(**kwargs)
-        self.flux = self._parallelize_flux_model(model).to(self.device)
-
-    def _parallelize_flux_model(self, model):
-        pass
+        self.flux = xFuserFlux(**kwargs).to(self.device)
 
 
     def forward(self, x, timestep, context, y, guidance, control=None, **kwargs):
@@ -39,8 +35,17 @@ class FluxWorker:
         m, u = self.flux.load_state_dict(sd, strict=strict)
         return m, u
 
+    # call after all the weight are loaded(including LoRa)
+    def parallelize_model(self):
+        self._parallelize_flux_model()
+        self.flux.to(self.device)
+
     def state_dict(self):
         return self.flux.state_dict()
 
     def execute_method(self, method, *args, **kwargs):
         return getattr(self, method)(*args, **kwargs)
+
+    def _parallelize_flux_model(self):
+        
+        pass

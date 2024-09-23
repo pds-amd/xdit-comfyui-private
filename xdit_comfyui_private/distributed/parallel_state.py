@@ -5,6 +5,8 @@ from yunchang import set_seq_parallel_pg
 
 from logging import getLogger
 
+from xdit_comfyui_private.model.flux.math import init_seq_parallel_attn
+
 
 logger = getLogger(__name__)
 
@@ -36,3 +38,4 @@ def init_model_parallel(ulysses_degree, ring_degree, rank, world_size):
         rank, 
         world_size=world_size
     )
+    init_seq_parallel_attn()

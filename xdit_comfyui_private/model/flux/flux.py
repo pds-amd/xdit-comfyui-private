@@ -19,6 +19,7 @@ from comfy.ldm.flux.model import Flux, FluxParams
 
 from einops import rearrange, repeat
 import comfy.ldm.common_dit
+from .layers import xFuserDoubleStreamBlock, xFuesrSingleStreamBlock
 
 class FluxSegmentation(nn.Module):
     def __init__(self,):
@@ -40,7 +41,35 @@ class xFuserFlux(Flux):
 
     def __init__(self, image_model=None, final_layer=True, dtype=None, device=None, operations=None, **kwargs):
         super().__init__(image_model=image_model, final_layer=final_layer, dtype=dtype, device=device, operations=operations, **kwargs)
+        params = FluxParams(**kwargs)
         self.segment_image_text = FluxSegmentation()
+        self.double_blocks = nn.ModuleList(
+            [
+                xFuserDoubleStreamBlock(
+                    self.hidden_size,
+                    self.num_heads,
+                    mlp_ratio=params.mlp_ratio,
+                    qkv_bias=params.qkv_bias,
+                    dtype=dtype,
+                    device=device,
+                    operations=operations,
+                )
+                for _ in range(params.depth)
+            ]
+        )
+        self.single_blocks = nn.ModuleList(
+            [
+                xFuesrSingleStreamBlock(
+                    hidden_size=self.hidden_size,
+                    num_heads=self.num_heads,
+                    mlp_ratio=params.mlp_ratio,
+                    dtype=dtype,
+                    device=device,
+                    operations=operations,
+                )
+                for _ in range(params.depth_single_blocks)
+            ]
+        )
 
     def forward_orig(
         self,
@@ -66,10 +95,10 @@ class xFuserFlux(Flux):
             vec = vec + self.guidance_in(timestep_embedding(guidance, 256).to(img.dtype))
 
         vec = vec + self.vector_in(y)
-        txt = self.segment_image_text(txt)
+        # txt = self.segment_image_text(txt)
         txt = self.txt_in(txt)
 
-        txt_ids = self.segment_image_text(txt_ids)
+        # txt_ids = self.segment_image_text(txt_ids)
         img_ids = self.segment_image_text(img_ids)
         ids = torch.cat((txt_ids, img_ids), dim=1)
         pe = self.pe_embedder(ids)
