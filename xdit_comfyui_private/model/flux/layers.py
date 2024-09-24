@@ -12,6 +12,7 @@ from comfy.ldm.flux.layers import EmbedND, MLPEmbedder, SingleStreamBlock, Doubl
 class xFuserDoubleStreamBlock(DoubleStreamBlock):
     def __init__(self, hidden_size: int, num_heads: int, mlp_ratio: float, qkv_bias: bool = False, dtype=None, device=None, operations=None):
         super().__init__(hidden_size=hidden_size, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, dtype=dtype, device=device, operations=operations)
+        self.lora_processor = None
 
     def forward(self, img: Tensor, txt: Tensor, vec: Tensor, pe: Tensor):
         img_mod1, img_mod2 = self.img_mod(vec)
@@ -21,6 +22,10 @@ class xFuserDoubleStreamBlock(DoubleStreamBlock):
         img_modulated = self.img_norm1(img)
         img_modulated = (1 + img_mod1.scale) * img_modulated + img_mod1.shift
         img_qkv = self.img_attn.qkv(img_modulated)
+        
+        if self.lora_processor:
+            img_qkv = self.lora_processor.add_shift(self.lora_processor.qkv_lora1, img_qkv, img_modulated)
+
         img_q, img_k, img_v = img_qkv.view(img_qkv.shape[0], img_qkv.shape[1], 3, self.num_heads, -1).permute(2, 0, 3, 1, 4)
         img_q, img_k = self.img_attn.norm(img_q, img_k, img_v)
 
@@ -28,6 +33,10 @@ class xFuserDoubleStreamBlock(DoubleStreamBlock):
         txt_modulated = self.txt_norm1(txt)
         txt_modulated = (1 + txt_mod1.scale) * txt_modulated + txt_mod1.shift
         txt_qkv = self.txt_attn.qkv(txt_modulated)
+
+        if self.lora_processor:
+            txt_qkv = self.lora_processor.add_shift(self.lora_processor.qkv_lora2, txt_qkv, txt_modulated)
+
         txt_q, txt_k, txt_v = txt_qkv.view(txt_qkv.shape[0], txt_qkv.shape[1], 3, self.num_heads, -1).permute(2, 0, 3, 1, 4)
         txt_q, txt_k = self.txt_attn.norm(txt_q, txt_k, txt_v)
 
@@ -41,16 +50,27 @@ class xFuserDoubleStreamBlock(DoubleStreamBlock):
 
         # calculate the img bloks
         img = img + img_mod1.gate * self.img_attn.proj(img_attn)
+
+        if self.lora_processor:
+            img = self.lora_processor.add_shift(self.lora_processor.proj_lora1, img, img_attn, img_mod1.gate)
+
         img = img + img_mod2.gate * self.img_mlp((1 + img_mod2.scale) * self.img_norm2(img) + img_mod2.shift)
 
         # calculate the txt bloks
         txt += txt_mod1.gate * self.txt_attn.proj(txt_attn)
+
+        if self.lora_processor:
+            txt = self.lora_processor.add_shift(self.lora_processor.proj_lora2, txt, txt_attn, txt_mod1.gate)
+
         txt += txt_mod2.gate * self.txt_mlp((1 + txt_mod2.scale) * self.txt_norm2(txt) + txt_mod2.shift)
 
         if txt.dtype == torch.float16:
             txt = torch.nan_to_num(txt, nan=0.0, posinf=65504, neginf=-65504)
 
         return img, txt
+    
+    def set_lora_processor(self, processor):
+        self.lora_processor = processor
 
 
 class xFuesrSingleStreamBlock(SingleStreamBlock):
