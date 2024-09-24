@@ -1,8 +1,9 @@
 import comfy
 import logging
+import socket
 from comfy import model_management
 from comfy import model_detection
-from .executor import FluxExecutor
+from .executor.executor import FluxExecutor
 
 def load_diffusion_model_state_dict(sd, model_options={}): #load unet in diffusers or regular format
     dtype = model_options.get("dtype", None)
