@@ -15,7 +15,7 @@ folder_paths.folder_names_and_paths["xlabs_loras"] = ([dir_xlabs_loras], folder_
 
 
 def cleanprint(a):
-    print(a)
+    # print(a)
     return a
 
 class XDiTUNETLoader:
@@ -60,8 +60,10 @@ class XDiTFluxLoraLoader:
     CATEGORY = "XDiTNodes"
 
     def loadmodel(self, model, lora_name, strength_model):
-        model.model.diffusion_model.load_lora(os.path.join(dir_xlabs_loras, lora_name), strength_model)
-        return (model,)
+        bi = model.clone()
+        lora_path = os.path.join(dir_xlabs_loras, lora_name)
+        bi.lora_cache[lora_path] = strength_model
+        return (bi,)
 
 
 NODE_CLASS_MAPPINGS = {

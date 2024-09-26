@@ -23,6 +23,7 @@ class FluxWorker:
         init_distributed_enviroment(kwargs.pop('distributed_init_method', 'env://'), self.world_size, self.rank)
         init_model_parallel(self.ulysses_degree, self.ring_degree, self.rank, self.world_size)
         self.flux = xFuserFlux(**kwargs).to(self.device)
+        self.lora_processors_dict = {}
 
 
     def forward(self, x, timestep, context, y, guidance, control=None, **kwargs):
@@ -36,10 +37,6 @@ class FluxWorker:
             configs_worker = {'transformer_options': {'cond_or_uncond': [0], 'sigmas': torch.tensor([1.], device=self.device)}}
             output = self.flux.forward(x_worker, timestep_worker, context_worker, y_worker, guidance_worker, control, **configs_worker)
         
-        if self.call_times % 20 == 0:
-            torch.cuda.empty_cache()
-            gc.collect()
-            print(torch.cuda.memory_summary())
         return output
 
     def load_state_dict(self, sd, strict=False):
@@ -63,7 +60,8 @@ class FluxWorker:
 
     def load_lora(self, lora_path, strength_model):
         checkpoint, lora_rank = load_flux_lora(lora_path)
-
+        
+        self.lora_processors_dict[lora_path] = []
         lora_attn_procs = {}
         if check_is_comfy_lora(checkpoint):
             checkpoint = comfy_to_xlabs_lora(checkpoint)
@@ -78,6 +76,19 @@ class FluxWorker:
                     lora_state_dict[k[len(name) + 1:]] = checkpoint[k]
             lora_processor.load_state_dict(lora_state_dict)
             lora_processor.to(self.device)
+            self.lora_processors_dict[lora_path].append(lora_processor)
+            
             loras_processor = DoubleStreamBlockLorasMixerProcessor()
-            loras_processor.add_lora(lora_processor)
+            for lora_processors in self.lora_processors_dict.values():
+                loras_processor.add_lora(lora_processors[idx])
+            # loras_processor.add_lora(lora_processor)
             double_block.set_lora_processor(loras_processor)
+
+    def clean_cache(self):
+        torch.cuda.empty_cache()
+        gc.collect()
+
+    def clean_lora(self):
+        for double_block in self.flux.double_blocks:
+            double_block.set_lora_processor(None)
+        self.lora_processors_dict = {}
