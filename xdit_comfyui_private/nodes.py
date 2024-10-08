@@ -2,6 +2,8 @@ import time
 import os
 import torch
 import folder_paths
+import comfy
+import latent_preview
 
 from .utils import load_diffusion_model
 
@@ -65,13 +67,71 @@ class XDiTFluxLoraLoader:
         bi.lora_cache[lora_path] = strength_model
         return (bi,)
 
+class XDiTSamplerCustomAdvanced:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"noise": ("NOISE", ),
+                    "guider": ("GUIDER", ),
+                    "sampler": ("SAMPLER", ),
+                    "sigmas": ("SIGMAS", ),
+                    "latent_image": ("LATENT", ),
+                     }
+                }
+
+    RETURN_TYPES = ("LATENT","LATENT")
+    RETURN_NAMES = ("output", "denoised_output")
+
+    FUNCTION = "sample"
+
+    CATEGORY = "XDiTNodes"
+
+    def sample(self, noise, guider, sampler, sigmas, latent_image):
+        latent = latent_image
+        latent_image = latent["samples"]
+        latent = latent.copy()
+        latent_image = comfy.sample.fix_empty_latent_channels(guider.model_patcher, latent_image)
+        latent["samples"] = latent_image
+
+        noise_mask = None
+        if "noise_mask" in latent:
+            noise_mask = latent["noise_mask"]
+
+        x0_output = {}
+        callback = latent_preview.prepare_callback(guider.model_patcher, sigmas.shape[-1] - 1, x0_output)
+
+        disable_pbar = not comfy.utils.PROGRESS_BAR_ENABLED
+
+        if hasattr(guider.model_patcher.model.diffusion_model, 'clean_lora'):
+            guider.model_patcher.model.diffusion_model.clean_lora()
+            for lora_path, strength_model in guider.model_patcher.lora_cache.items():
+                print(f"Applying Lora: {lora_path} with strength {strength_model}")
+                guider.model_patcher.model.diffusion_model.load_lora(lora_path, strength_model)
+
+        samples = guider.sample(noise.generate_noise(latent), latent_image, sampler, sigmas, denoise_mask=noise_mask, callback=callback, disable_pbar=disable_pbar, seed=noise.seed)
+        samples = samples.to(comfy.model_management.intermediate_device())
+
+        out = latent.copy()
+        out["samples"] = samples
+        if "x0" in x0_output:
+            out_denoised = latent.copy()
+            out_denoised["samples"] = guider.model_patcher.model.process_latent_out(x0_output["x0"].cpu())
+        else:
+            out_denoised = out
+        
+        if hasattr(guider.model_patcher.model.diffusion_model, 'clean_cache'):
+            guider.model_patcher.model.diffusion_model.clean_cache()
+        
+        return (out, out_denoised)
 
 NODE_CLASS_MAPPINGS = {
     "XDiTUNETLoader": XDiTUNETLoader,
     "XDiTFluxLoraLoader": XDiTFluxLoraLoader,
+    "XDiTSamplerCustomAdvanced": XDiTSamplerCustomAdvanced,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "XDiTUNETLoader": "XDiTUNETLoader",
     "XDiTFluxLoraLoader": "XDiTFluxLoraLoader",
+    "XDiTSamplerCustomAdvanced": "XDiTSamplerCustomAdvanced",
 }

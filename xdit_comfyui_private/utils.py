@@ -4,6 +4,7 @@ import socket
 from comfy import model_management
 from comfy import model_detection
 from .executor.executor import FluxExecutor
+from .model.model_patcher import CustomModelPatcher
 
 def load_diffusion_model_state_dict(sd, model_options={}): #load unet in diffusers or regular format
     dtype = model_options.get("dtype", None)
@@ -68,7 +69,7 @@ def load_diffusion_model_state_dict(sd, model_options={}): #load unet in diffuse
         logging.info("left over keys in unet: {}".format(left_over))
     print(f"Load_device: {load_device}, Offload_device: {offload_device}")
     print(model)
-    return comfy.model_patcher.ModelPatcher(model, load_device=load_device, offload_device=offload_device)
+    return CustomModelPatcher(model, load_device=load_device, offload_device=offload_device)
 
 
 def load_diffusion_model(unet_path, model_options={}):
