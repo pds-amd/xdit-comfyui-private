@@ -13,7 +13,6 @@ class FluxWorker:
     modules_to_convert = []
 
     def __init__(self, **kwargs):
-        self.call_times = 0
         self.world_size = kwargs.pop('world_size', 1)
         self.ulysses_degree = kwargs.pop('ulysses_degree', 1)
         self.ring_degree = kwargs.pop('ring_degree', 1)
@@ -27,7 +26,6 @@ class FluxWorker:
 
 
     def forward(self, x, timestep, context, y, guidance, control=None, **kwargs):
-        self.call_times += 1
         with torch.no_grad():
             x_worker = x.to(self.device)
             timestep_worker = timestep.to(self.device)
@@ -81,7 +79,6 @@ class FluxWorker:
             loras_processor = DoubleStreamBlockLorasMixerProcessor()
             for lora_processors in self.lora_processors_dict.values():
                 loras_processor.add_lora(lora_processors[idx])
-            # loras_processor.add_lora(lora_processor)
             double_block.set_lora_processor(loras_processor)
 
     def clean_cache(self):
