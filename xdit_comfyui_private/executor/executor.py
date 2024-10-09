@@ -165,3 +165,6 @@ class FluxExecutor:
 
     def state_dict(self):
         return self._run_workers("state_dict")
+
+    def load_lora(self, lora_path, strength_model):
+        return self._run_workers("load_lora", lora_path, strength_model)
