@@ -7,13 +7,13 @@ import latent_preview
 
 from .utils import load_diffusion_model
 
-dir_xlabs = os.path.join(folder_paths.models_dir, "xlabs")
-os.makedirs(dir_xlabs, exist_ok=True)
-dir_xlabs_loras = os.path.join(dir_xlabs, "loras")
-os.makedirs(dir_xlabs_loras, exist_ok=True)
+dir_xdit = os.path.join(folder_paths.models_dir, "xdit")
+os.makedirs(dir_xdit, exist_ok=True)
+dir_xdit_loras = os.path.join(dir_xdit, "loras")
+os.makedirs(dir_xdit_loras, exist_ok=True)
 
-folder_paths.folder_names_and_paths["xlabs"] = ([dir_xlabs], folder_paths.supported_pt_extensions)
-folder_paths.folder_names_and_paths["xlabs_loras"] = ([dir_xlabs_loras], folder_paths.supported_pt_extensions)
+folder_paths.folder_names_and_paths["xdit"] = ([dir_xdit], folder_paths.supported_pt_extensions)
+folder_paths.folder_names_and_paths["xdit_loras"] = ([dir_xdit_loras], folder_paths.supported_pt_extensions)
 
 
 def cleanprint(a):
@@ -52,7 +52,7 @@ class XDiTFluxLoraLoader:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": { "model": ("MODEL",),
-                              "lora_name": (cleanprint(folder_paths.get_filename_list("xlabs_loras")), ),
+                              "lora_name": (cleanprint(folder_paths.get_filename_list("xdit_loras")), ),
                               "strength_model": ("FLOAT", {"default": 1.0, "min": -100.0, "max": 100.0, "step": 0.01}),
                               }}
 
@@ -63,7 +63,7 @@ class XDiTFluxLoraLoader:
 
     def loadmodel(self, model, lora_name, strength_model):
         bi = model.clone()
-        lora_path = os.path.join(dir_xlabs_loras, lora_name)
+        lora_path = os.path.join(dir_xdit_loras, lora_name)
         bi.lora_cache[lora_path] = strength_model
         return (bi,)
 
