@@ -1,12 +1,14 @@
 import comfy
 import logging
 import socket
+import torch
+
 from comfy import model_management
 from comfy import model_detection
 from .executor.executor import FluxExecutor
 from .model.model_patcher import CustomModelPatcher
 
-def load_diffusion_model_state_dict(sd, model_options={}): #load unet in diffusers or regular format
+def load_diffusion_model_state_dict(sd, model_options={}, load_weights=False): #load unet in diffusers or regular format
     dtype = model_options.get("dtype", None)
 
     #Allow loading unets from checkpoint files
@@ -42,8 +44,14 @@ def load_diffusion_model_state_dict(sd, model_options={}): #load unet in diffuse
                     logging.warning("{} {}".format(diffusers_keys[k], k))
 
     offload_device = model_management.unet_offload_device()
+
+    weight_dtype = comfy.utils.weight_dtype(sd, "")
+    unet_weight_dtype = list(model_config.supported_inference_dtypes)
+    if weight_dtype is not None:
+        unet_weight_dtype.append(weight_dtype)
+
     if dtype is None:
-        unet_dtype = model_management.unet_dtype(model_params=parameters, supported_dtypes=model_config.supported_inference_dtypes)
+        unet_dtype = model_management.unet_dtype(model_params=parameters, supported_dtypes=unet_weight_dtype)
     else:
         unet_dtype = dtype
 
@@ -62,11 +70,12 @@ def load_diffusion_model_state_dict(sd, model_options={}): #load unet in diffuse
     else:
         operations = model_config.custom_operations
 
-    model.diffusion_model = FluxExecutor(**unet_config, device=None, operations=operations)
-    model.load_model_weights(new_sd, "")
-    left_over = sd.keys()
-    if len(left_over) > 0:
-        logging.info("left over keys in unet: {}".format(left_over))
+    model.diffusion_model = FluxExecutor(**unet_config, device=load_device, operations=operations)
+    if load_weights:
+        model.load_model_weights(new_sd, "")
+        left_over = sd.keys()
+        if len(left_over) > 0:
+            logging.info("left over keys in unet: {}".format(left_over))
     print(f"Load_device: {load_device}, Offload_device: {offload_device}")
     print(model)
     return CustomModelPatcher(model, load_device=load_device, offload_device=offload_device)
@@ -74,7 +83,11 @@ def load_diffusion_model_state_dict(sd, model_options={}): #load unet in diffuse
 
 def load_diffusion_model(unet_path, model_options={}):
     sd = comfy.utils.load_torch_file(unet_path)
-    model = load_diffusion_model_state_dict(sd, model_options=model_options)
+    if "fp8" not in unet_path:
+        model = load_diffusion_model_state_dict(sd, model_options=model_options, load_weights=True)
+    else:
+        model = load_diffusion_model_state_dict(sd, model_options=model_options, load_weights=False)
+        model.model.diffusion_model.load_state_dict_from_file(unet_path)
     if model is None:
         logging.error("ERROR UNSUPPORTED UNET {}".format(unet_path))
         raise RuntimeError("ERROR: Could not detect model type of: {}".format(unet_path))

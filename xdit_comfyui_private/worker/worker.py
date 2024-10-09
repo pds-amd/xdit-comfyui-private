@@ -3,7 +3,9 @@ import torch
 import torch.distributed as dist
 import os
 import gc
+import comfy
 
+from comfy import model_detection
 from xdit_comfyui_private.model.flux.flux import xFuserFlux
 from xdit_comfyui_private.distributed.parallel_state import init_distributed_enviroment, init_model_parallel
 from xdit_comfyui_private.modules.loras.utils import load_flux_lora, check_is_comfy_lora, comfy_to_xlabs_lora
@@ -40,6 +42,14 @@ class FluxWorker:
     def load_state_dict(self, sd, strict=False):
         m, u = self.flux.load_state_dict(sd, strict=strict)
         return m, u
+
+    def load_state_dict_from_file(self, unet_path):
+        sd = comfy.utils.load_torch_file(unet_path)
+        diffusion_model_prefix = model_detection.unet_prefix_from_state_dict(sd)
+        temp_sd = comfy.utils.state_dict_prefix_replace(sd, {diffusion_model_prefix: ""}, filter_keys=True)
+        if len(temp_sd) > 0:
+            sd = temp_sd
+        return self.load_state_dict(sd, strict=False)
 
     # call after all the weight are loaded(including LoRa)
     def parallelize_model(self):

@@ -178,6 +178,9 @@ class FluxExecutor:
     def load_state_dict(self, sd, strict=False):
         return self._run_workers("load_state_dict", sd, strict=strict)
 
+    def load_state_dict_from_file(self, unet_path):
+        return self._run_workers("load_state_dict_from_file", unet_path)
+
     def state_dict(self):
         return self._run_workers("state_dict")
 
