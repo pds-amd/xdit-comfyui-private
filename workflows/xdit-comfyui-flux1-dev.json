@@ -1,50 +1,7 @@
 {
-  "last_node_id": 39,
-  "last_link_id": 119,
+  "last_node_id": 57,
+  "last_link_id": 163,
   "nodes": [
-    {
-      "id": 11,
-      "type": "DualCLIPLoader",
-      "pos": {
-        "0": 48,
-        "1": 288,
-        "2": 0,
-        "3": 0,
-        "4": 0,
-        "5": 0,
-        "6": 0,
-        "7": 0,
-        "8": 0,
-        "9": 0
-      },
-      "size": {
-        "0": 315,
-        "1": 106
-      },
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "CLIP",
-          "type": "CLIP",
-          "links": [
-            10
-          ],
-          "slot_index": 0,
-          "shape": 3
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "DualCLIPLoader"
-      },
-      "widgets_values": [
-        "t5xxl_fp16.safetensors",
-        "clip_l.safetensors",
-        "flux"
-      ]
-    },
     {
       "id": 16,
       "type": "KSamplerSelect",
@@ -65,7 +22,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 1,
+      "order": 0,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -73,7 +30,7 @@
           "name": "SAMPLER",
           "type": "SAMPLER",
           "links": [
-            19
+            152
           ],
           "shape": 3
         }
@@ -105,7 +62,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 13,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
@@ -135,223 +92,6 @@
       "bgcolor": "#355"
     },
     {
-      "id": 22,
-      "type": "BasicGuider",
-      "pos": {
-        "0": 576,
-        "1": 48,
-        "2": 0,
-        "3": 0,
-        "4": 0,
-        "5": 0,
-        "6": 0,
-        "7": 0,
-        "8": 0,
-        "9": 0
-      },
-      "size": {
-        "0": 222.3482666015625,
-        "1": 46
-      },
-      "flags": {},
-      "order": 14,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 54,
-          "slot_index": 0
-        },
-        {
-          "name": "conditioning",
-          "type": "CONDITIONING",
-          "link": 42,
-          "slot_index": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "GUIDER",
-          "type": "GUIDER",
-          "links": [
-            30
-          ],
-          "slot_index": 0,
-          "shape": 3
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "BasicGuider"
-      }
-    },
-    {
-      "id": 13,
-      "type": "SamplerCustomAdvanced",
-      "pos": {
-        "0": 864,
-        "1": 192,
-        "2": 0,
-        "3": 0,
-        "4": 0,
-        "5": 0,
-        "6": 0,
-        "7": 0,
-        "8": 0,
-        "9": 0
-      },
-      "size": {
-        "0": 272.3617858886719,
-        "1": 124.53733825683594
-      },
-      "flags": {},
-      "order": 15,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "noise",
-          "type": "NOISE",
-          "link": 37,
-          "slot_index": 0
-        },
-        {
-          "name": "guider",
-          "type": "GUIDER",
-          "link": 30,
-          "slot_index": 1
-        },
-        {
-          "name": "sampler",
-          "type": "SAMPLER",
-          "link": 19,
-          "slot_index": 2
-        },
-        {
-          "name": "sigmas",
-          "type": "SIGMAS",
-          "link": 20,
-          "slot_index": 3
-        },
-        {
-          "name": "latent_image",
-          "type": "LATENT",
-          "link": 116,
-          "slot_index": 4
-        }
-      ],
-      "outputs": [
-        {
-          "name": "output",
-          "type": "LATENT",
-          "links": [
-            24
-          ],
-          "slot_index": 0,
-          "shape": 3
-        },
-        {
-          "name": "denoised_output",
-          "type": "LATENT",
-          "links": null,
-          "shape": 3
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "SamplerCustomAdvanced"
-      }
-    },
-    {
-      "id": 25,
-      "type": "RandomNoise",
-      "pos": {
-        "0": 480,
-        "1": 768,
-        "2": 0,
-        "3": 0,
-        "4": 0,
-        "5": 0,
-        "6": 0,
-        "7": 0,
-        "8": 0,
-        "9": 0
-      },
-      "size": {
-        "0": 315,
-        "1": 82
-      },
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "NOISE",
-          "type": "NOISE",
-          "links": [
-            37
-          ],
-          "shape": 3
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "RandomNoise"
-      },
-      "widgets_values": [
-        309673446921275,
-        "randomize"
-      ],
-      "color": "#2a363b",
-      "bgcolor": "#3f5159"
-    },
-    {
-      "id": 8,
-      "type": "VAEDecode",
-      "pos": {
-        "0": 866,
-        "1": 367,
-        "2": 0,
-        "3": 0,
-        "4": 0,
-        "5": 0,
-        "6": 0,
-        "7": 0,
-        "8": 0,
-        "9": 0
-      },
-      "size": {
-        "0": 210,
-        "1": 46
-      },
-      "flags": {},
-      "order": 16,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "samples",
-          "type": "LATENT",
-          "link": 24
-        },
-        {
-          "name": "vae",
-          "type": "VAE",
-          "link": 12
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            9
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "VAEDecode"
-      }
-    },
-    {
       "id": 27,
       "type": "EmptySD3LatentImage",
       "pos": {
@@ -371,7 +111,7 @@
         "1": 106
       },
       "flags": {},
-      "order": 10,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
@@ -396,7 +136,7 @@
           "name": "LATENT",
           "type": "LATENT",
           "links": [
-            116
+            154
           ],
           "slot_index": 0,
           "shape": 3
@@ -431,7 +171,7 @@
         "1": 82
       },
       "flags": {},
-      "order": 3,
+      "order": 1,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -479,7 +219,7 @@
         "1": 82
       },
       "flags": {},
-      "order": 4,
+      "order": 2,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -508,41 +248,6 @@
       "bgcolor": "#535"
     },
     {
-      "id": 9,
-      "type": "SaveImage",
-      "pos": {
-        "0": 1155,
-        "1": 196,
-        "2": 0,
-        "3": 0,
-        "4": 0,
-        "5": 0,
-        "6": 0,
-        "7": 0,
-        "8": 0,
-        "9": 0
-      },
-      "size": {
-        "0": 985.3012084960938,
-        "1": 1060.3828125
-      },
-      "flags": {},
-      "order": 17,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 9
-        }
-      ],
-      "outputs": [],
-      "properties": {},
-      "widgets_values": [
-        "ComfyUI"
-      ]
-    },
-    {
       "id": 37,
       "type": "Note",
       "pos": {
@@ -562,7 +267,7 @@
         "1": 117.98363494873047
       },
       "flags": {},
-      "order": 5,
+      "order": 3,
       "mode": 0,
       "inputs": [],
       "outputs": [],
@@ -576,11 +281,54 @@
       "bgcolor": "#653"
     },
     {
+      "id": 11,
+      "type": "DualCLIPLoader",
+      "pos": {
+        "0": -51,
+        "1": 278,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0
+      },
+      "size": {
+        "0": 315,
+        "1": 106
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            10
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DualCLIPLoader"
+      },
+      "widgets_values": [
+        "t5xxl_fp16.safetensors",
+        "clip_l.safetensors",
+        "flux"
+      ]
+    },
+    {
       "id": 10,
       "type": "VAELoader",
       "pos": {
-        "0": 48,
-        "1": 432,
+        "0": -48,
+        "1": 438,
         "2": 0,
         "3": 0,
         "4": 0,
@@ -595,7 +343,7 @@
         "1": 60.429901123046875
       },
       "flags": {},
-      "order": 6,
+      "order": 5,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -620,8 +368,8 @@
       "id": 28,
       "type": "Note",
       "pos": {
-        "0": 48,
-        "1": 576,
+        "0": -78,
+        "1": 572,
         "2": 0,
         "3": 0,
         "4": 0,
@@ -636,7 +384,7 @@
         "1": 288
       },
       "flags": {},
-      "order": 7,
+      "order": 6,
       "mode": 0,
       "inputs": [],
       "outputs": [],
@@ -648,6 +396,138 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": {
+        "0": 422,
+        "1": 261,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0
+      },
+      "size": {
+        "0": 422.84503173828125,
+        "1": 164.31304931640625
+      },
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            41
+          ],
+          "slot_index": 0
+        }
+      ],
+      "title": "CLIP Text Encode (Positive Prompt)",
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "handsome girl in a suit covered with bold tattoos and holding a pistol. Animatrix illustration style, fantasy style, natural photo cinematic"
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": {
+        "0": 1196,
+        "1": 132,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0
+      },
+      "size": {
+        "0": 210,
+        "1": 46
+      },
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 155
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 12
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            9
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      }
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "pos": {
+        "0": 1182,
+        "1": 386,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0
+      },
+      "size": {
+        "0": 514.103515625,
+        "1": 561.7135620117188
+      },
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 9
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "ComfyUI"
+      ]
     },
     {
       "id": 30,
@@ -669,13 +549,13 @@
         "1": 130
       },
       "flags": {},
-      "order": 11,
+      "order": 14,
       "mode": 0,
       "inputs": [
         {
           "name": "model",
           "type": "MODEL",
-          "link": 118,
+          "link": 163,
           "slot_index": 0
         },
         {
@@ -719,11 +599,11 @@
       ]
     },
     {
-      "id": 6,
-      "type": "CLIPTextEncode",
+      "id": 54,
+      "type": "XDiTSamplerCustomAdvanced",
       "pos": {
-        "0": 450,
-        "1": 137,
+        "0": 824,
+        "1": -9,
         "2": 0,
         "3": 0,
         "4": 0,
@@ -734,38 +614,201 @@
         "9": 0
       },
       "size": {
-        "0": 422.84503173828125,
-        "1": 164.31304931640625
+        "0": 355.20001220703125,
+        "1": 106
       },
       "flags": {},
-      "order": 9,
+      "order": 16,
       "mode": 0,
       "inputs": [
         {
-          "name": "clip",
-          "type": "CLIP",
-          "link": 10
+          "name": "noise",
+          "type": "NOISE",
+          "link": 151
+        },
+        {
+          "name": "guider",
+          "type": "GUIDER",
+          "link": 150
+        },
+        {
+          "name": "sampler",
+          "type": "SAMPLER",
+          "link": 152
+        },
+        {
+          "name": "sigmas",
+          "type": "SIGMAS",
+          "link": 153
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 154
         }
       ],
       "outputs": [
         {
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
+          "name": "output",
+          "type": "LATENT",
           "links": [
-            41
+            155
           ],
+          "slot_index": 0,
+          "shape": 3
+        },
+        {
+          "name": "denoised_output",
+          "type": "LATENT",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "XDiTSamplerCustomAdvanced"
+      }
+    },
+    {
+      "id": 22,
+      "type": "BasicGuider",
+      "pos": {
+        "0": 520,
+        "1": 10,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0
+      },
+      "size": {
+        "0": 222.3482666015625,
+        "1": 46
+      },
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 54,
+          "slot_index": 0
+        },
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 42,
+          "slot_index": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "GUIDER",
+          "type": "GUIDER",
+          "links": [
+            150
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BasicGuider"
+      }
+    },
+    {
+      "id": 57,
+      "type": "XDiTFluxLoraLoader",
+      "pos": {
+        "0": -21,
+        "1": 26,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0
+      },
+      "size": {
+        "0": 315,
+        "1": 82
+      },
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 161
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            162,
+            163
+          ],
+          "shape": 3,
           "slot_index": 0
         }
       ],
-      "title": "CLIP Text Encode (Positive Prompt)",
       "properties": {
-        "Node name for S&R": "CLIPTextEncode"
+        "Node name for S&R": "XDiTFluxLoraLoader"
       },
       "widgets_values": [
-        "cute anime girl with massive fluffy fennec ears and a big fluffy tail blonde messy long hair blue eyes wearing a maid outfit with a long black gold leaf pattern dress and a white apron mouth open holding a fancy black forest cake with candles on top in the kitchen of an old dark Victorian mansion lit by candlelight with a bright window to the foggy forest and very expensive stuff everywhere"
+        "lora.safetensors",
+        1
+      ]
+    },
+    {
+      "id": 53,
+      "type": "XDiTUNETLoader",
+      "pos": {
+        "0": -387,
+        "1": 27,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0
+      },
+      "size": {
+        "0": 315,
+        "1": 82
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            161
+          ],
+          "slot_index": 0,
+          "shape": 3
+        }
       ],
-      "color": "#232",
-      "bgcolor": "#353"
+      "properties": {
+        "Node name for S&R": "XDiTUNETLoader"
+      },
+      "widgets_values": [
+        "flux1-dev.safetensors",
+        "default"
+      ]
     },
     {
       "id": 17,
@@ -787,13 +830,13 @@
         "1": 106
       },
       "flags": {},
-      "order": 12,
+      "order": 13,
       "mode": 0,
       "inputs": [
         {
           "name": "model",
           "type": "MODEL",
-          "link": 119,
+          "link": 162,
           "slot_index": 0
         }
       ],
@@ -802,7 +845,7 @@
           "name": "SIGMAS",
           "type": "SIGMAS",
           "links": [
-            20
+            153
           ],
           "shape": 3
         }
@@ -817,11 +860,11 @@
       ]
     },
     {
-      "id": 39,
-      "type": "XfuserUNETLoader",
+      "id": 25,
+      "type": "RandomNoise",
       "pos": {
-        "0": -29,
-        "1": 76,
+        "0": 480,
+        "1": 768,
         "2": 0,
         "3": 0,
         "4": 0,
@@ -832,7 +875,7 @@
         "9": 0
       },
       "size": {
-        "0": 352.79998779296875,
+        "0": 315,
         "1": 82
       },
       "flags": {},
@@ -841,23 +884,23 @@
       "inputs": [],
       "outputs": [
         {
-          "name": "MODEL",
-          "type": "MODEL",
+          "name": "NOISE",
+          "type": "NOISE",
           "links": [
-            118,
-            119
+            151
           ],
-          "slot_index": 0,
           "shape": 3
         }
       ],
       "properties": {
-        "Node name for S&R": "XfuserUNETLoader"
+        "Node name for S&R": "RandomNoise"
       },
       "widgets_values": [
-        "flux1-dev.safetensors",
-        "default"
-      ]
+        898165930971046,
+        "randomize"
+      ],
+      "color": "#2a363b",
+      "bgcolor": "#3f5159"
     }
   ],
   "links": [
@@ -884,46 +927,6 @@
       8,
       1,
       "VAE"
-    ],
-    [
-      19,
-      16,
-      0,
-      13,
-      2,
-      "SAMPLER"
-    ],
-    [
-      20,
-      17,
-      0,
-      13,
-      3,
-      "SIGMAS"
-    ],
-    [
-      24,
-      13,
-      0,
-      8,
-      0,
-      "LATENT"
-    ],
-    [
-      30,
-      22,
-      0,
-      13,
-      1,
-      "GUIDER"
-    ],
-    [
-      37,
-      25,
-      0,
-      13,
-      0,
-      "NOISE"
     ],
     [
       41,
@@ -982,26 +985,74 @@
       "INT"
     ],
     [
-      116,
+      150,
+      22,
+      0,
+      54,
+      1,
+      "GUIDER"
+    ],
+    [
+      151,
+      25,
+      0,
+      54,
+      0,
+      "NOISE"
+    ],
+    [
+      152,
+      16,
+      0,
+      54,
+      2,
+      "SAMPLER"
+    ],
+    [
+      153,
+      17,
+      0,
+      54,
+      3,
+      "SIGMAS"
+    ],
+    [
+      154,
       27,
       0,
-      13,
+      54,
       4,
       "LATENT"
     ],
     [
-      118,
-      39,
+      155,
+      54,
       0,
-      30,
+      8,
+      0,
+      "LATENT"
+    ],
+    [
+      161,
+      53,
+      0,
+      57,
       0,
       "MODEL"
     ],
     [
-      119,
-      39,
+      162,
+      57,
       0,
       17,
+      0,
+      "MODEL"
+    ],
+    [
+      163,
+      57,
+      0,
+      30,
       0,
       "MODEL"
     ]
@@ -1010,10 +1061,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.9090909090909097,
+      "scale": 0.5730855330116809,
       "offset": [
-        -130.92223743127235,
-        74.79425844162449
+        426.79853831316774,
+        132.4540770145938
       ]
     },
     "groupNodes": {

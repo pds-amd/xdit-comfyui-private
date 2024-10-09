@@ -3,7 +3,9 @@ import torch
 import torch.distributed as dist
 import os
 import gc
+import comfy
 
+from comfy import model_detection
 from xdit_comfyui_private.model.flux.flux import xFuserFlux
 from xdit_comfyui_private.distributed.parallel_state import init_distributed_enviroment, init_model_parallel
 from xdit_comfyui_private.modules.loras.utils import load_flux_lora, check_is_comfy_lora, comfy_to_xlabs_lora
@@ -13,7 +15,6 @@ class FluxWorker:
     modules_to_convert = []
 
     def __init__(self, **kwargs):
-        self.call_times = 0
         self.world_size = kwargs.pop('world_size', 1)
         self.ulysses_degree = kwargs.pop('ulysses_degree', 1)
         self.ring_degree = kwargs.pop('ring_degree', 1)
@@ -23,10 +24,10 @@ class FluxWorker:
         init_distributed_enviroment(kwargs.pop('distributed_init_method', 'env://'), self.world_size, self.rank)
         init_model_parallel(self.ulysses_degree, self.ring_degree, self.rank, self.world_size)
         self.flux = xFuserFlux(**kwargs).to(self.device)
+        self.lora_processors_dict = {}
 
 
     def forward(self, x, timestep, context, y, guidance, control=None, **kwargs):
-        self.call_times += 1
         with torch.no_grad():
             x_worker = x.to(self.device)
             timestep_worker = timestep.to(self.device)
@@ -36,15 +37,19 @@ class FluxWorker:
             configs_worker = {'transformer_options': {'cond_or_uncond': [0], 'sigmas': torch.tensor([1.], device=self.device)}}
             output = self.flux.forward(x_worker, timestep_worker, context_worker, y_worker, guidance_worker, control, **configs_worker)
         
-        if self.call_times % 20 == 0:
-            torch.cuda.empty_cache()
-            gc.collect()
-            print(torch.cuda.memory_summary())
         return output
 
     def load_state_dict(self, sd, strict=False):
         m, u = self.flux.load_state_dict(sd, strict=strict)
         return m, u
+
+    def load_state_dict_from_file(self, unet_path):
+        sd = comfy.utils.load_torch_file(unet_path)
+        diffusion_model_prefix = model_detection.unet_prefix_from_state_dict(sd)
+        temp_sd = comfy.utils.state_dict_prefix_replace(sd, {diffusion_model_prefix: ""}, filter_keys=True)
+        if len(temp_sd) > 0:
+            sd = temp_sd
+        return self.load_state_dict(sd, strict=False)
 
     # call after all the weight are loaded(including LoRa)
     def parallelize_model(self):
@@ -63,7 +68,8 @@ class FluxWorker:
 
     def load_lora(self, lora_path, strength_model):
         checkpoint, lora_rank = load_flux_lora(lora_path)
-
+        
+        self.lora_processors_dict[lora_path] = []
         lora_attn_procs = {}
         if check_is_comfy_lora(checkpoint):
             checkpoint = comfy_to_xlabs_lora(checkpoint)
@@ -78,6 +84,18 @@ class FluxWorker:
                     lora_state_dict[k[len(name) + 1:]] = checkpoint[k]
             lora_processor.load_state_dict(lora_state_dict)
             lora_processor.to(self.device)
+            self.lora_processors_dict[lora_path].append(lora_processor)
+            
             loras_processor = DoubleStreamBlockLorasMixerProcessor()
-            loras_processor.add_lora(lora_processor)
+            for lora_processors in self.lora_processors_dict.values():
+                loras_processor.add_lora(lora_processors[idx])
             double_block.set_lora_processor(loras_processor)
+
+    def clean_cache(self):
+        torch.cuda.empty_cache()
+        gc.collect()
+
+    def clean_lora(self):
+        for double_block in self.flux.double_blocks:
+            double_block.set_lora_processor(None)
+        self.lora_processors_dict = {}

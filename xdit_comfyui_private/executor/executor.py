@@ -5,6 +5,7 @@ from logging import getLogger
 
 import torch
 import ray
+import copy
 from ray.util.placement_group import PlacementGroup
 from ray.util.placement_group import PlacementGroupSchedulingStrategy
 
@@ -52,7 +53,20 @@ def _wait_until_pg_ready(current_placement_group: "PlacementGroup"):
             "`ray status` to make sure the cluster has enough resources."
         ) from None
 
+def singleton(cls):
+    instances = {}
 
+    def get_instance(*args, **kwargs):
+        if cls not in instances:
+            instances[cls] = cls(*args, **kwargs)
+        else:
+            instances[cls].clean()
+            instances[cls] = cls(*args, **kwargs)
+        return instances[cls]
+
+    return get_instance
+
+@singleton
 class FluxExecutor:
     def __init__(self, **kwargs):
         self.max_devices_use = 4
@@ -60,6 +74,7 @@ class FluxExecutor:
         self.ring_degree = 2
         self._init_flux_workers(**kwargs)
         self.dtype = kwargs.get('dtype', None)
+        self.lora_cache = {}
 
     def _init_flux_workers(self, **kwargs):
         self._initialize_ray_cluster()
@@ -163,8 +178,23 @@ class FluxExecutor:
     def load_state_dict(self, sd, strict=False):
         return self._run_workers("load_state_dict", sd, strict=strict)
 
+    def load_state_dict_from_file(self, unet_path):
+        return self._run_workers("load_state_dict_from_file", unet_path)
+
     def state_dict(self):
         return self._run_workers("state_dict")
 
     def load_lora(self, lora_path, strength_model):
         return self._run_workers("load_lora", lora_path, strength_model)
+
+    def clean_cache(self):
+        return self._run_workers("clean_cache")
+
+    def clean_lora(self):
+        return self._run_workers("clean_lora")
+
+    def clean(self):
+        for worker in self.workers:
+            ray.kill(worker)
+        ray.util.remove_placement_group(self.placement_group)
+        self.workers = []
