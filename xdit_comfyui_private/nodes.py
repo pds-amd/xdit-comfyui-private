@@ -119,9 +119,6 @@ class XDiTSamplerCustomAdvanced:
         else:
             out_denoised = out
         
-        if hasattr(guider.model_patcher.model.diffusion_model, 'clean_cache'):
-            guider.model_patcher.model.diffusion_model.clean_cache()
-        
         return (out, out_denoised)
 
 NODE_CLASS_MAPPINGS = {

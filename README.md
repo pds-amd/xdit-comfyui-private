@@ -17,7 +17,9 @@ pip install -U "ray[data,train,tune,serve]"
 
 ### Install [yunchang](https://github.com/feifeibear/long-context-attention)
 ```bash
-pip install yunchang
+git clone git@github.com:feifeibear/long-context-attention.git
+cd long-context-attention
+pip install .
 ```
 
 ### Put the xdit-comfyui-private folder into the ComfyUI/custom_nodes folder
