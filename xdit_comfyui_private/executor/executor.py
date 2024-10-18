@@ -69,12 +69,30 @@ def singleton(cls):
 @singleton
 class FluxExecutor:
     def __init__(self, **kwargs):
-        self.max_devices_use = 4
-        self.ulysses_degree = 2
-        self.ring_degree = 2
+        self.max_devices_use = torch.cuda.device_count()
+        self._init_parallel_degree()
         self._init_flux_workers(**kwargs)
         self.dtype = kwargs.get('dtype', None)
         self.lora_cache = {}
+
+    def _init_parallel_degree(self):
+        if self.max_devices_use == 1:
+            self.ulysses_degree = 1
+            self.ring_degree = 1
+        elif self.max_devices_use == 2:
+            self.ulysses_degree = 2
+            self.ring_degree = 1
+        elif self.max_devices_use == 4:
+            self.ulysses_degree = 2
+            self.ring_degree = 2
+        elif self.max_devices_use == 8:
+            self.ulysses_degree = 4
+            self.ring_degree = 2
+        elif self.max_devices_use == 16:
+            self.ulysses_degree = 4
+            self.ring_degree = 4
+        else:
+            raise ValueError(f"Invalid number of devices: {self.max_devices_use}")
 
     def _init_flux_workers(self, **kwargs):
         self._initialize_ray_cluster()

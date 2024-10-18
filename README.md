@@ -19,6 +19,7 @@ pip install -U "ray[data,train,tune,serve]"
 ```bash
 git clone git@github.com:feifeibear/long-context-attention.git
 cd long-context-attention
+pip install ninja
 pip install .
 ```
 
