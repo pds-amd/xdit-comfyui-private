@@ -1,3 +1,6 @@
+import torch
+import numpy as np
+
 class ControlNetContainer:
     def __init__(
             self, controlnet, controlnet_cond, 
@@ -37,3 +40,13 @@ class LATENT_PROCESSOR_COMFY:
         return (x / self.scale_factor) + self.shift_factor
     def go_back(self, x):
         return (x - self.shift_factor) * self.scale_factor
+    
+def optimized_tensor_to_numpy(tensor):        
+    cpu_tensor = torch.empty(tensor.shape,
+                           dtype=torch.float32,
+                           pin_memory=True)
+    cpu_tensor.copy_(tensor.to(torch.float32))
+    
+    torch.cuda.synchronize()
+    
+    return cpu_tensor.numpy()

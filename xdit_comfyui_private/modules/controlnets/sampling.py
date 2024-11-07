@@ -8,7 +8,7 @@ import numpy as np
 import time
 
 from tqdm.auto import tqdm
-from .utils import ControlNetContainer
+from .utils import ControlNetContainer, optimized_tensor_to_numpy
 def model_forward(
     model,
     img: Tensor,
@@ -267,8 +267,8 @@ def denoise_controlnet(
                     for j in range(len(controlnet_hidden_states)):
                         controlnet_hidden_states[j] += block_res_samples[j] * container.controlnet_gs
         
-        controlnet_hidden_states_npy = [state.to(dtype=torch.float32).cpu().numpy() for state in controlnet_hidden_states]
-
+        # controlnet_hidden_states_npy = [optimized_tensor_to_numpy(state) for state in controlnet_hidden_states]
+        controlnet_hidden_states_npy = [state.to(torch.float32).cpu().numpy() for state in controlnet_hidden_states]
         control_time_elapsed = time.time() - control_time_start
         forward_time_start = time.time()
         pred = model_forward(
@@ -284,7 +284,6 @@ def denoise_controlnet(
             block_controlnet_hidden_states_npy=controlnet_hidden_states_npy,
         )
         forward_time_elapsed = time.time() - forward_time_start
-        print(pred.shape)
         print(f"Controlnet time: {control_time_elapsed:.2f} seconds")
         print(f"Forward time: {forward_time_elapsed:.2f} seconds")
 
