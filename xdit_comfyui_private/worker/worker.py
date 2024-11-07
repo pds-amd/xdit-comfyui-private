@@ -26,6 +26,34 @@ class FluxWorker:
         self.flux = xFuserFlux(**kwargs).to(self.device)
         self.lora_processors_dict = {}
 
+    def forward_orig(self, img, img_ids, txt, txt_ids, timesteps, y, guidance, control=None, neg_mode=None, block_controlnet_hidden_states=None, block_controlnet_hidden_states_npy=None, **kwargs):
+        with torch.no_grad():
+            if block_controlnet_hidden_states is not None:
+                pass
+            elif block_controlnet_hidden_states_npy is not None:
+                block_controlnet_hidden_states = []
+                for npy in block_controlnet_hidden_states_npy:
+                    state = torch.from_numpy(npy).to(dtype=img.dtype).to(self.device)
+                    block_controlnet_hidden_states.append(state)
+            out = self.flux.forward_orig(img, 
+                                            img_ids, 
+                                            txt, 
+                                            txt_ids, 
+                                            timesteps, 
+                                            y, 
+                                            guidance, 
+                                            control, 
+                                            neg_mode, 
+                                            block_controlnet_hidden_states)
+            
+            if dist.get_world_size() > 1:
+                out_list = [
+                    torch.empty_like(out) for _ in range(dist.get_world_size())
+                ]
+                dist.all_gather(out_list, out)
+                out = torch.cat(out_list, dim=1)
+
+        return out
 
     def forward(self, x, timestep, context, y, guidance, control=None, **kwargs):
         with torch.no_grad():

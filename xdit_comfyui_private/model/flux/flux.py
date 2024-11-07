@@ -81,6 +81,8 @@ class xFuserFlux(Flux):
         y: Tensor,
         guidance: Tensor = None,
         control=None,
+        neg_mode=None,
+        block_controlnet_hidden_states=None,
     ) -> Tensor:
         if img.ndim != 3 or txt.ndim != 3:
             raise ValueError("Input img and txt tensors must have 3 dimensions.")
@@ -95,6 +97,7 @@ class xFuserFlux(Flux):
             vec = vec + self.guidance_in(timestep_embedding(guidance, 256).to(img.dtype))
 
         vec = vec + self.vector_in(y)
+        
         # txt = self.segment_image_text(txt)
         txt = self.txt_in(txt)
 
@@ -103,27 +106,17 @@ class xFuserFlux(Flux):
         ids = torch.cat((txt_ids, img_ids), dim=1)
         pe = self.pe_embedder(ids)
 
+
         for i, block in enumerate(self.double_blocks):
             img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
-
-            if control is not None: # Controlnet
-                control_i = control.get("input")
-                if i < len(control_i):
-                    add = control_i[i]
-                    if add is not None:
-                        img += add
+            if block_controlnet_hidden_states is not None:
+                block_controlnet_hidden_state = self.segment_image_text(block_controlnet_hidden_states[i % 2])
+                img = img + block_controlnet_hidden_state
 
         img = torch.cat((txt, img), 1)
 
         for i, block in enumerate(self.single_blocks):
             img = block(img, vec=vec, pe=pe)
-
-            if control is not None: # Controlnet
-                control_o = control.get("output")
-                if i < len(control_o):
-                    add = control_o[i]
-                    if add is not None:
-                        img[:, txt.shape[1] :, ...] += add
 
         img = img[:, txt.shape[1] :, ...]
 

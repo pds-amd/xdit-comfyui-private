@@ -190,8 +190,23 @@ class FluxExecutor:
 
         return spmd_worker_output
 
-    def __call__(self, x, timestep, context, y, guidance, control=None, **kwargs):
+    def __call__(self, x, timestep, context, y, guidance, control=None, block_controlnet_hidden_states=None, **kwargs):
         return self._run_workers("forward", x, timestep, context, y, guidance, control, **kwargs)
+
+    def forward_orig(self, img, img_ids, txt, txt_ids, timesteps, y, guidance, control=None, neg_mode=None, block_controlnet_hidden_states=None, block_controlnet_hidden_states_npy=None, **kwargs):
+        return self._run_workers("forward_orig", 
+                                 img, 
+                                 img_ids, 
+                                 txt, 
+                                 txt_ids, 
+                                 timesteps, 
+                                 y, 
+                                 guidance, 
+                                 control, 
+                                 neg_mode, 
+                                 block_controlnet_hidden_states, 
+                                 block_controlnet_hidden_states_npy,
+                                 **kwargs)
 
     def load_state_dict(self, sd, strict=False):
         return self._run_workers("load_state_dict", sd, strict=strict)
