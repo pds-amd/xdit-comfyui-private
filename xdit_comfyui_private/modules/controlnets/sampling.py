@@ -267,8 +267,7 @@ def denoise_controlnet(
                     for j in range(len(controlnet_hidden_states)):
                         controlnet_hidden_states[j] += block_res_samples[j] * container.controlnet_gs
         
-        # controlnet_hidden_states_npy = [optimized_tensor_to_numpy(state) for state in controlnet_hidden_states]
-        controlnet_hidden_states_npy = [state.to(torch.float32).cpu().numpy() for state in controlnet_hidden_states]
+        controlnet_hidden_states_npy = [optimized_tensor_to_numpy(state) for state in controlnet_hidden_states]
         control_time_elapsed = time.time() - control_time_start
         forward_time_start = time.time()
         pred = model_forward(
