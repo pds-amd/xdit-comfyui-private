@@ -59,3 +59,11 @@ We also provide some loras for you to try. You can put the loras into the `${Com
 We also provide some FP8 models for you to try if you don't have enough VRAM. You can put the FP8 models into the `${ComfyUI}/models/unet` folder. Download the FP8 models from [here](https://huggingface.co/Comfy-Org/flux1-dev/blob/main/flux1-dev-fp8.safetensors).
 
 Use the `xdit-flux1-dev-fp8.json` workflow in the ComfyUI/workflows folder to try the FP8 models.
+
+## ControlNet Supports
+We also provide some ControlNet for you to try. Before you use this function, you need to install the `x-flux-comfyui` node in the ComfyUI from [here](https://github.com/XLabs-AI/x-flux-comfyui/tree/main). Please follow the [instruction](https://github.com/XLabs-AI/x-flux-comfyui/tree/main?tab=readme-ov-file#installation) in the `x-flux-comfyui` repo to install the node.
+
+Currently, we support the following ControlNet:
+1. [flux-controlnet-canny] (https://huggingface.co/XLabs-AI/flux-controlnet-canny)
+
+Use the `xdit-flux1-dev-controlnet-canny.json` workflow in the ComfyUI/workflows folder to try the ControlNet.
