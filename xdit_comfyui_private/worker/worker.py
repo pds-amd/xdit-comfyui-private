@@ -11,6 +11,56 @@ from xdit_comfyui_private.distributed.parallel_state import init_distributed_env
 from xdit_comfyui_private.modules.loras.utils import load_flux_lora, check_is_comfy_lora, comfy_to_xlabs_lora
 from xdit_comfyui_private.modules.loras.layers import DoubleStreamBlockLoraProcessor, DoubleStreamBlockLorasMixerProcessor
 
+from xdit_comfyui_private.model.sd.unet import xFuserUnet
+
+class UNetWorker:
+    def __init__(self, **kwargs):
+        self.world_size = kwargs.pop('world_size', 1)
+        rank = int(ray.get_gpu_ids()[0]) % self.world_size
+        self.rank = self.local_rank = rank
+        self.device = "cuda:0"
+        init_distributed_enviroment(kwargs.pop('distributed_init_method', 'env://'), self.world_size, self.rank)
+        self.unet = xFuserUnet(**kwargs).to(self.device)
+        self.is_compiled = False
+
+    def execute_method(self, method, *args, **kwargs):
+        return getattr(self, method)(*args, **kwargs)
+
+    def forward(self, x, timestep, context, y, control=None, transformer_options={}, **kwargs):
+        if not self.is_compiled:
+            self.unet = torch.compile(self.unet)
+            self.is_compiled = True
+            torch.cuda.synchronize()
+
+        bs, c, h, w = x.shape
+        
+        with torch.no_grad():
+            if bs == self.world_size and self.world_size > 1:
+                x = x[self.rank:self.rank+1]
+                timestep = timestep[self.rank:self.rank+1]
+                y = y[self.rank:self.rank+1]
+                context = context[self.rank:self.rank+1]
+                output = self.unet.forward_orig(x, timestep, context, y, control, transformer_options, **kwargs)
+                out_list = [
+                    torch.empty_like(output) for _ in range(dist.get_world_size())
+                ]
+                dist.all_gather(out_list, output)
+                output = torch.cat(out_list, dim=0)
+            # else:
+            #     out = super().forward(x, timesteps, context, y, control, transformer_options, **kwargs)
+            #     x_worker = x.to(self.device)
+            #     timestep_worker = timestep.to(self.device)
+            #     context_worker = context.to(self.device)
+            #     y_worker = y.to(self.device)
+
+            #     output = self.unet.forward(x_worker, timestep_worker, context_worker, y_worker, control, transformer_options, **kwargs)
+        
+        return output
+    
+    def load_state_dict(self, sd, strict=False):
+        m, u = self.unet.load_state_dict(sd, strict=strict)
+        return m, u
+
 class FluxWorker:
     modules_to_convert = []
 

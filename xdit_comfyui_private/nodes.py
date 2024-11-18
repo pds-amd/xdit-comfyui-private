@@ -6,7 +6,7 @@ import comfy
 import latent_preview
 import comfy.model_management as mm
 
-from .utils import load_diffusion_model
+from .utils import load_diffusion_model, load_checkpoint_guess_config
 from xdit_comfyui_private.modules.controlnets.sampling import get_noise, prepare, get_schedule, denoise, denoise_controlnet, unpack
 from xdit_comfyui_private.modules.controlnets.utils import LATENT_PROCESSOR_COMFY, ControlNetContainer
 
@@ -158,6 +158,13 @@ class XDiTSampler:
                  ):
         additional_steps = 11 if controlnet_condition is None else 12
         mm.load_model_gpu(model)
+
+        if hasattr(model.model.diffusion_model, 'clean_lora'):
+            model.model.diffusion_model.clean_lora()
+            for lora_path, strength_model in model.lora_cache.items():
+                print(f"Applying Lora: {lora_path} with strength {strength_model}")
+                model.model.diffusion_model.load_lora(lora_path, strength_model)        
+        
         inmodel = model.model
         #print(conditioning[0][0].shape) #//t5
         #print(conditioning[0][1]['pooled_output'].shape) #//clip
@@ -218,7 +225,8 @@ class XDiTSampler:
         # for sampler preview
         x0_output = {}
         callback = latent_preview.prepare_callback(model, len(timesteps) - 1, x0_output)
-
+        
+        
         if controlnet_condition is None:
             x = denoise(
                 inmodel.diffusion_model, **inp_cond, timesteps=timesteps, guidance=guidance,
@@ -296,11 +304,34 @@ class XDiTSampler:
         #model.model.to(offload_device)
         return (lat_ret,)
 
+class XDiTCheckpointLoaderSimple:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": { 
+                "ckpt_name": (folder_paths.get_filename_list("checkpoints"), {"tooltip": "The name of the checkpoint (model) to load."}),
+            }
+        }
+    RETURN_TYPES = ("MODEL", "CLIP", "VAE")
+    OUTPUT_TOOLTIPS = ("The model used for denoising latents.", 
+                       "The CLIP model used for encoding text prompts.", 
+                       "The VAE model used for encoding and decoding images to and from latent space.")
+    FUNCTION = "load_checkpoint"
+
+    CATEGORY = "XDiTNodes"
+    DESCRIPTION = "Loads a diffusion model checkpoint, diffusion models are used to denoise latents."
+
+    def load_checkpoint(self, ckpt_name):
+        ckpt_path = folder_paths.get_full_path_or_raise("checkpoints", ckpt_name)
+        out = load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=True, embedding_directory=folder_paths.get_folder_paths("embeddings"))
+        return out[:3]
+
 NODE_CLASS_MAPPINGS = {
     "XDiTUNETLoader": XDiTUNETLoader,
     "XDiTFluxLoraLoader": XDiTFluxLoraLoader,
     "XDiTSamplerCustomAdvanced": XDiTSamplerCustomAdvanced,
     "XDiTSampler": XDiTSampler,
+    "XDiTCheckpointLoaderSimple": XDiTCheckpointLoaderSimple,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -308,4 +339,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "XDiTFluxLoraLoader": "XDiTFluxLoraLoader",
     "XDiTSamplerCustomAdvanced": "XDiTSamplerCustomAdvanced",
     "XDiTSampler": "XDiTSampler",
+    "XDiTCheckpointLoaderSimple": "XDiTCheckpointLoaderSimple",
 }
