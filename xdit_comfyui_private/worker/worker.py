@@ -28,6 +28,7 @@ class UNetWorker:
 
     def forward(self, x, timestep, context, y, control=None, transformer_options={}, **kwargs):
         if not self.is_compiled:
+            print("Compiling UNet")
             self.unet = torch.compile(self.unet)
             self.is_compiled = True
             torch.cuda.synchronize()
@@ -46,14 +47,9 @@ class UNetWorker:
                 ]
                 dist.all_gather(out_list, output)
                 output = torch.cat(out_list, dim=0)
-            # else:
-            #     out = super().forward(x, timesteps, context, y, control, transformer_options, **kwargs)
-            #     x_worker = x.to(self.device)
-            #     timestep_worker = timestep.to(self.device)
-            #     context_worker = context.to(self.device)
-            #     y_worker = y.to(self.device)
-
-            #     output = self.unet.forward(x_worker, timestep_worker, context_worker, y_worker, control, transformer_options, **kwargs)
+            
+            else:
+                output = self.unet.forward_orig(x, timestep, context, y, control, transformer_options, **kwargs)
         
         return output
     
