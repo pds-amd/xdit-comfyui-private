@@ -2,6 +2,7 @@ import comfy
 import logging
 import socket
 import torch
+import numpy as np
 
 from comfy import model_management
 from comfy import model_detection
@@ -182,3 +183,21 @@ def load_state_dict_guess_config(sd, output_vae=True, output_clip=True, output_c
             model_management.load_models_gpu([model_patcher], force_full_load=True)
 
     return (model_patcher, clip, vae, clipvision)
+
+def tensor_to_numpy(tensor):
+    if isinstance(tensor, torch.Tensor):
+        cpu_tensor = torch.empty(tensor.shape,
+                               dtype=torch.float32,
+                               pin_memory=True)
+        cpu_tensor.copy_(tensor.to(torch.float32))
+        
+        torch.cuda.synchronize()
+        return cpu_tensor.numpy()
+    else:
+        return tensor
+
+def numpy_to_tensor(numpy_array, device=torch.device("cuda"), dtype=torch.float32):
+    if isinstance(numpy_array, np.ndarray):
+        return torch.from_numpy(numpy_array).to(device=device, dtype=dtype)
+    else:
+        return numpy_array

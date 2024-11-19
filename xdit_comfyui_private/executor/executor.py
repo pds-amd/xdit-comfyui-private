@@ -6,6 +6,7 @@ from logging import getLogger
 import torch
 import ray
 import copy
+import numpy as np
 from ray.util.placement_group import PlacementGroup
 from ray.util.placement_group import PlacementGroupSchedulingStrategy
 
@@ -73,6 +74,7 @@ class UNetExecutor:
         self._init_parallel_degree()
         self._init_unet_workers(**kwargs)
         self.dtype = kwargs.get('dtype', None)
+        self.use_tensor_to_numpy = True
 
     def _init_parallel_degree(self):
         pass
@@ -166,13 +168,30 @@ class UNetExecutor:
         for worker_output in ray_worker_outputs[1:]:
             if isinstance(spmd_worker_output, torch.Tensor):
                 assert torch.allclose(spmd_worker_output, worker_output), "Outputs do not match"
+            elif isinstance(spmd_worker_output, np.ndarray):
+                assert spmd_worker_output.all() == worker_output.all(), "Outputs do not match"
             else:
                 assert spmd_worker_output == worker_output, "Outputs do not match"
 
         return spmd_worker_output
 
     def __call__(self, x, timestep=None, context=None, y=None, control=None, transformer_options={}, **kwargs):
-        return self._run_workers("forward", x, timestep, context, y, control, transformer_options, **kwargs)
+        from xdit_comfyui_private.utils import tensor_to_numpy, numpy_to_tensor
+        time_start = time.time()
+        dtype = x.dtype
+        if self.use_tensor_to_numpy:
+            print("Using tensor_to_numpy")
+            x = tensor_to_numpy(x)
+            timestep = tensor_to_numpy(timestep)
+            context = tensor_to_numpy(context)
+            y = tensor_to_numpy(y)
+
+        result= self._run_workers("forward", x, timestep, context, y, control, transformer_options, dtype=dtype, use_tensor_to_numpy=self.use_tensor_to_numpy, **kwargs)
+        if isinstance(result, np.ndarray):
+            result = numpy_to_tensor(result, dtype=dtype)
+        time_end = time.time()
+        print(f"UNet forward time(in executor): {time_end - time_start:.4f} seconds")
+        return result
 
     def load_state_dict(self, sd, strict=False):
         return self._run_workers("load_state_dict", sd, strict=strict)
