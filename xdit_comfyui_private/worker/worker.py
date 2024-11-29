@@ -4,12 +4,75 @@ import torch.distributed as dist
 import os
 import gc
 import comfy
-
+import time
+import numpy as np
 from comfy import model_detection
 from xdit_comfyui_private.model.flux.flux import xFuserFlux
 from xdit_comfyui_private.distributed.parallel_state import init_distributed_enviroment, init_model_parallel
 from xdit_comfyui_private.modules.loras.utils import load_flux_lora, check_is_comfy_lora, comfy_to_xlabs_lora
 from xdit_comfyui_private.modules.loras.layers import DoubleStreamBlockLoraProcessor, DoubleStreamBlockLorasMixerProcessor
+
+from xdit_comfyui_private.model.sd.unet import xFuserUnet
+
+class UNetWorker:
+    def __init__(self, **kwargs):
+        self.world_size = kwargs.pop('world_size', 1)
+        rank = int(ray.get_gpu_ids()[0]) % self.world_size
+        self.rank = self.local_rank = rank
+        self.device = "cuda:0"
+        init_distributed_enviroment(kwargs.pop('distributed_init_method', 'env://'), self.world_size, self.rank)
+        self.unet = xFuserUnet(**kwargs).to(self.device)
+        self.is_compiled = False
+
+    def execute_method(self, method, *args, **kwargs):
+        return getattr(self, method)(*args, **kwargs)
+
+    def forward(self, x, timestep, context, y, control=None, transformer_options={}, dtype=torch.float32, use_tensor_to_numpy=False, **kwargs):
+        from xdit_comfyui_private.utils import tensor_to_numpy, numpy_to_tensor
+        time_start = time.time()
+        if not self.is_compiled:
+            print("Compiling UNet")
+            self.unet = torch.compile(self.unet, mode="reduce-overhead", backend="inductor", fullgraph=True)
+            self.is_compiled = True
+            torch.cuda.synchronize()
+        
+        if use_tensor_to_numpy:
+            x = numpy_to_tensor(x, dtype=dtype)
+            timestep = numpy_to_tensor(timestep, dtype=dtype)
+            context = numpy_to_tensor(context, dtype=dtype)
+            y = numpy_to_tensor(y, dtype=dtype)
+
+        bs, c, h, w = x.shape
+
+        with torch.no_grad():
+
+            if bs % self.world_size == 0 and self.world_size > 1:
+                start_idx = self.rank * (bs // self.world_size)
+                end_idx = start_idx + (bs // self.world_size)
+                x = x[start_idx:end_idx]
+                timestep = timestep[start_idx:end_idx]
+                y = y[start_idx:end_idx]
+                context = context[start_idx:end_idx]
+                output= self.unet.forward_orig(x, timestep, context, y, control, transformer_options, **kwargs)
+                out_list = [
+                    torch.empty_like(output) for _ in range(dist.get_world_size())
+                ]
+                dist.all_gather(out_list, output)
+                output = torch.cat(out_list, dim=0)
+            else:
+                output = self.unet.forward_orig(x, timestep, context, y, control, transformer_options, **kwargs)
+        
+        if use_tensor_to_numpy:
+            output = tensor_to_numpy(output)
+        
+        torch.cuda.synchronize()
+        time_end = time.time()
+        print(f"[RANK {self.rank}] UNet forward time(in worker): {time_end - time_start:.4f} seconds")
+        return output
+    
+    def load_state_dict(self, sd, strict=False):
+        m, u = self.unet.load_state_dict(sd, strict=strict)
+        return m, u
 
 class FluxWorker:
     modules_to_convert = []
