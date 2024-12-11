@@ -66,14 +66,15 @@ def ring_flash_attn_forward(
             key, value = k, v
 
         if not causal or step <= comm.rank:
-            block_out, _, _, _, _, block_lse, _, _ = _flash_attn_forward(
+            block_out, block_lse, _, _ = _flash_attn_forward(
                 q,
                 key,
                 value,
                 dropout_p,
                 softmax_scale,
                 causal=causal and step == 0,
-                window_size=window_size,
+                window_size_left=window_size[0],
+                window_size_right=window_size[1],
                 softcap=0.0,
                 alibi_slopes=alibi_slopes,
                 return_softmax=True and dropout_p > 0,
