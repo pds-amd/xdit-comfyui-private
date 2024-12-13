@@ -6,7 +6,7 @@ import comfy
 import latent_preview
 import comfy.model_management as mm
 
-from .utils import load_diffusion_model, load_checkpoint_guess_config
+from .utils import load_diffusion_model, load_checkpoint_guess_config, any_typ
 from xdit_comfyui_private.modules.controlnets.sampling import get_noise, prepare, get_schedule, denoise, denoise_controlnet, unpack
 from xdit_comfyui_private.modules.controlnets.utils import LATENT_PROCESSOR_COMFY, ControlNetContainer
 
@@ -326,12 +326,131 @@ class XDiTCheckpointLoaderSimple:
         out = load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=True, embedding_directory=folder_paths.get_folder_paths("embeddings"))
         return out[:3]
 
+
+class XDitCompileModel:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "model": (any_typ,),
+                "is_patcher": (
+                    "BOOLEAN",
+                    {
+                        "default": True,
+                    },
+                ),
+                "object_to_patch": (
+                    "STRING",
+                    {
+                        "default": "diffusion_model",
+                    },
+                ),
+                "compiler": (
+                    "STRING",
+                    {
+                        "default": "torch.compile",
+                    }
+                ),
+                "fullgraph": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                    },
+                ),
+                "dynamic": ("BOOLEAN", {"default": False}),
+                "mode": (
+                    "STRING",
+                    {
+                        "multiline": True,
+                        "default": "",
+                    },
+                ),
+                "options": (
+                    "STRING",
+                    {
+                        "multiline": True,
+                        # "default": "{}",
+                    },
+                ),
+                "disable": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                    },
+                ),
+                "backend": (
+                    "STRING",
+                    {
+                        "default": "inductor",
+                    },
+                ),
+            }
+        }
+
+    RETURN_TYPES = (any_typ,)
+    FUNCTION = "patch"
+
+    CATEGORY = "XDiTNodes"
+
+    def patch(
+        self,
+        model,
+        is_patcher,
+        object_to_patch,
+        compiler,
+        fullgraph,
+        dynamic,
+        mode,
+        options,
+        disable,
+        backend,
+    ):
+        import importlib
+        import json
+
+        import_path, function_name = compiler.rsplit(".", 1)
+        module = importlib.import_module(import_path)
+        compile_function = getattr(module, function_name)
+
+        mode = mode if mode else None
+        options = json.loads(options) if options else None
+        
+        from xdit_comfyui_private.utils import patch_for_torch_compile
+        patch_for_torch_compile()
+
+        if is_patcher:
+            patcher = model.clone()
+        else:
+            patcher = model.patcher
+            patcher = patcher.clone()
+
+        patcher.add_object_patch(
+            object_to_patch,
+            compile_function(
+                patcher.get_model_object(object_to_patch),
+                fullgraph=fullgraph,
+                dynamic=dynamic,
+                mode=mode,
+                options=options,
+                disable=disable,
+                backend=backend,
+            ),
+        )
+
+        if is_patcher:
+            return (patcher,)
+        else:
+            model.patcher = patcher
+            return (model,)
+
 NODE_CLASS_MAPPINGS = {
     "XDiTUNETLoader": XDiTUNETLoader,
     "XDiTFluxLoraLoader": XDiTFluxLoraLoader,
     "XDiTSamplerCustomAdvanced": XDiTSamplerCustomAdvanced,
     "XDiTSampler": XDiTSampler,
     "XDiTCheckpointLoaderSimple": XDiTCheckpointLoaderSimple,
+    "XDitCompileModel": XDitCompileModel,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -340,4 +459,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "XDiTSamplerCustomAdvanced": "XDiTSamplerCustomAdvanced",
     "XDiTSampler": "XDiTSampler",
     "XDiTCheckpointLoaderSimple": "XDiTCheckpointLoaderSimple",
+    "XDitCompileModel": "XDitCompileModel",
 }
