@@ -11,6 +11,13 @@ from comfy import clip_vision
 from .executor.executor import FluxExecutor, UNetExecutor
 from .model.model_patcher import CustomModelPatcher
 
+# wildcard trick is taken from pythongossss's
+class AnyType(str):
+    def __ne__(self, __value: object) -> bool:
+        return False
+
+any_typ = AnyType("*")
+
 def load_diffusion_model_state_dict(sd, model_options={}, load_weights=False): #load unet in diffusers or regular format
     dtype = model_options.get("dtype", None)
 
@@ -186,12 +193,7 @@ def load_state_dict_guess_config(sd, output_vae=True, output_clip=True, output_c
 
 def tensor_to_numpy(tensor):
     if isinstance(tensor, torch.Tensor):
-        cpu_tensor = torch.empty(tensor.shape,
-                               dtype=torch.float32,
-                               pin_memory=True)
-        cpu_tensor.copy_(tensor.to(torch.float32))
-        
-        torch.cuda.synchronize()
+        cpu_tensor = tensor.contiguous().cpu()
         return cpu_tensor.numpy()
     else:
         return tensor
@@ -201,3 +203,34 @@ def numpy_to_tensor(numpy_array, device=torch.device("cuda"), dtype=torch.float3
         return torch.from_numpy(numpy_array).to(device=device, dtype=dtype)
     else:
         return numpy_array
+
+has_patched_for_torch_compile = False
+
+def patch_for_torch_compile():
+    global has_patched_for_torch_compile
+    if has_patched_for_torch_compile:
+        return
+
+    import sys
+    from torch._inductor.compile_worker.subproc_pool import SubprocPool
+
+    old_subproc_pool_init = SubprocPool.__init__
+
+    # https://github.com/comfyanonymous/ComfyUI/issues/4196
+    def new_subproc_pool_init(self, *args, **kwargs):
+        to_insert = None
+        for i, p in enumerate(sys.path):
+            if p.endswith("comfy"):
+                to_insert = (i, p)
+                break
+        if to_insert is not None:
+                sys.path.pop(to_insert[0])
+        try:
+            old_subproc_pool_init(self, *args, **kwargs)
+        finally:
+            if to_insert is not None:
+                sys.path.insert(to_insert[0], to_insert[1])
+
+    SubprocPool.__init__ = new_subproc_pool_init
+
+    has_patched_for_torch_compile = True

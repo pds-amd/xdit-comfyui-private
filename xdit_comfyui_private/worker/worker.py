@@ -27,12 +27,15 @@ class UNetWorker:
     def execute_method(self, method, *args, **kwargs):
         return getattr(self, method)(*args, **kwargs)
 
-    def forward(self, x, timestep, context, y, control=None, transformer_options={}, dtype=torch.float32, use_tensor_to_numpy=False, **kwargs):
+    def forward(self, x, timestep, context, y, control=None, transformer_options={}, dtype=torch.float16, use_tensor_to_numpy=False, **kwargs):
         from xdit_comfyui_private.utils import tensor_to_numpy, numpy_to_tensor
         time_start = time.time()
         if not self.is_compiled:
             print("Compiling UNet")
-            self.unet = torch.compile(self.unet, mode="reduce-overhead", backend="inductor", fullgraph=True)
+            from xdit_comfyui_private.utils import patch_for_torch_compile
+            patch_for_torch_compile()
+            self.unet.to(dtype=dtype, memory_format=torch.channels_last)
+            self.unet = torch.compile(self.unet, mode="max-autotune-no-cudagraphs")
             self.is_compiled = True
             torch.cuda.synchronize()
         
@@ -53,14 +56,14 @@ class UNetWorker:
                 timestep = timestep[start_idx:end_idx]
                 y = y[start_idx:end_idx]
                 context = context[start_idx:end_idx]
-                output= self.unet.forward_orig(x, timestep, context, y, control, transformer_options, **kwargs)
+                output= self.unet(x, timestep, context, y, control, transformer_options, **kwargs).contiguous()
                 out_list = [
                     torch.empty_like(output) for _ in range(dist.get_world_size())
                 ]
                 dist.all_gather(out_list, output)
                 output = torch.cat(out_list, dim=0)
             else:
-                output = self.unet.forward_orig(x, timestep, context, y, control, transformer_options, **kwargs)
+                output = self.unet(x, timestep, context, y, control, transformer_options, **kwargs)
         
         if use_tensor_to_numpy:
             output = tensor_to_numpy(output)
